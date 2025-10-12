@@ -1,0 +1,16 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\src",
+    "\\src\\main",
+    "\\src\\main\\java",
+    "\\src\\main\\java\\com",
+    "\\src\\main\\java\\com\\jkdr",
+    "\\src\\main\\java\\com\\jkdr\\abyssalascentdimensionpatcher",
+    "\\src\\main\\java\\com\\jkdr\\abyssalascentdimensionpatcher\\mixins",
+    "\\src\\main\\resources",
+    "\\src\\main\\resources\\META-INF"
+  ],
+  "SelectedNode": "\\src\\main\\java\\com\\jkdr\\abyssalascentdimensionpatcher\\mixins\\AbyssalAscent_ServerPlayerGameMode_Patch.java",
+  "PreviewInSolutionExplorer": false
+}
