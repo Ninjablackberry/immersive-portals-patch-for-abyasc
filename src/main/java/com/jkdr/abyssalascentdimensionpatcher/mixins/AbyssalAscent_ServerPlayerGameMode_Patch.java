@@ -24,20 +24,22 @@ public abstract class AbyssalAscent_ServerPlayerGameMode_Patch {
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
+    //THIS FUNCTION DOES WORK AS INTENDED BUT THERE IS ANOTHER CHECK PREVENTING THE BLOCK FROM BREAKING.
+    //Wrap operation does not change the method but waits until "canReachRaw" is called and changes the value depending on if it is through a portal.
     @WrapOperation(
         method = "handleBlockBreakAction",
         at = @At(
-            value = "INVOKE",
+            value = "INVOKE", //Immersive portals tries to access the wrong method and is not designed to access "canReachRaw" so we have to call it manually.
             target = "Lnet/minecraft/server/level/ServerPlayer;canReachRaw(Lnet/minecraft/core/BlockPos;D)Z"
         )
     )
     private boolean wrapDistanceInHandleBlockBreakAction(
         ServerPlayer instance, BlockPos blockPos, double v, Operation<Boolean> original
     ) {
-        ServerLevel redirect = BlockManipulationServer.SERVER_PLAYER_INTERACTION_REDIRECT.get();
+        ServerLevel redirect = BlockManipulationServer.SERVER_PLAYER_INTERACTION_REDIRECT.get(); //Gets the value of player interaction through portal if value is null it means the interaction is normal and if its not null it is through a portal.
         if (redirect != null) {
-            return true;
+            return true; //Is through a portal, do not check in the original method.
         }
-        return original.call(instance, blockPos, v);
+        return original.call(instance, blockPos, v); //Is normal, continue with operation.
     }
 }
