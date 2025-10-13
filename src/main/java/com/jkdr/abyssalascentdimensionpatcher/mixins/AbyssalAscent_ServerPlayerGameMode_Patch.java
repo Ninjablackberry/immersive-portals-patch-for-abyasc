@@ -29,7 +29,7 @@ public abstract class AbyssalAscent_ServerPlayerGameMode_Patch {
     @WrapOperation(
         method = "handleBlockBreakAction",
         at = @At(
-            value = "INVOKE", //Immersive portals tries to access the wrong method and is not designed to access "canReachRaw" so we have to call it manually.
+            value = "INVOKE", //Immersive portals tries to access the wrong method and is not designed to access "canReachRaw" so we have to call it manually. This is not immersive portal's fault instead its just a mod incompatibility.
             target = "Lnet/minecraft/server/level/ServerPlayer;canReachRaw(Lnet/minecraft/core/BlockPos;D)Z"
         )
     )
