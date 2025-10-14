@@ -15,12 +15,26 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 
+import org.spongepowered.asm.mixin.injection.Redirect;
+import org.objectweb.asm.Opcodes;
+
 @Mixin(value = ServerPlayerGameMode.class, priority = 2000)
 public abstract class AbyssalAscent_ServerPlayerGameMode_Patch {
 
     @Shadow
     @Final
     protected ServerPlayer player;
+
+    @Shadow
+    private ServerLevel level;
+
+    private ServerLevel ip_getActualWorld() {
+        ServerLevel redirect = BlockManipulationServer.SERVER_PLAYER_INTERACTION_REDIRECT.get();
+        if (redirect != null) {
+            return redirect;
+        }
+        return level;
+    }
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
@@ -41,5 +55,22 @@ public abstract class AbyssalAscent_ServerPlayerGameMode_Patch {
             return true; //Is through a portal, do not check in the original method.
         }
         return original.call(instance, blockPos, v); //Is normal, continue with operation.
+    }
+
+    //Get this method added by a mod which caused incompatibility
+    @Redirect(
+        method = {
+            "removeBlock(Lnet/minecraft/core/BlockPos;Z)Z"
+        },
+        at = @At(
+            value = "FIELD",
+            opcode = Opcodes.GETFIELD,
+            target = "Lnet/minecraft/server/level/ServerPlayerGameMode;level:Lnet/minecraft/server/level/ServerLevel;"
+        )
+    )
+    private ServerLevel redirectGetLevel(
+        ServerPlayerGameMode serverPlayerGameMode
+    ) {
+        return ip_getActualWorld(); //On the value retrieved, return the correct dimension now allowing the proper block to be processed into breaking.
     }
 }
