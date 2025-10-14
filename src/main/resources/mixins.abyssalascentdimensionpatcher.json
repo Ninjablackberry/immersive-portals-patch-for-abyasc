@@ -4,9 +4,8 @@
   "refmap": "mixins.abyssalascentdimensionpatcher.refmap.json",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
-    "MixinServerTeleportationManager"
-    //Does not work so remove it for now
-    //"AbyssalAscent_ServerPlayerGameMode_Patch"
+    "MixinServerTeleportationManager",
+    "AbyssalAscent_ServerPlayerGameMode_Patch"
   ],
   "injectors": {
     "defaultRequire": 1
