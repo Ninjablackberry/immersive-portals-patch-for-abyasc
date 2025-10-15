@@ -28,17 +28,20 @@ public abstract class AbyssalAscent_ServerPlayerGameMode_Patch {
     @Shadow
     private ServerLevel level;
 
+    //Gets the ACTUAL world provided by immptlcore
     private ServerLevel ip_getActualWorld() {
+        //Get the saved server level when the player did an action from another dimension, if it is null it means the player did a regular action and immersive portals will let the vanilla / other mods handle it
         ServerLevel redirect = BlockManipulationServer.SERVER_PLAYER_INTERACTION_REDIRECT.get();
         if (redirect != null) {
+            //Take over and send the correct dimension
             return redirect;
         }
+        //Continue as normal
         return level;
     }
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    //THIS FUNCTION DOES WORK AS INTENDED BUT THERE IS ANOTHER CHECK PREVENTING THE BLOCK FROM BREAKING.
     //Wrap operation does not change the method but waits until "canReachRaw" is called and changes the value depending on if it is through a portal.
     @WrapOperation(
         method = "handleBlockBreakAction",
