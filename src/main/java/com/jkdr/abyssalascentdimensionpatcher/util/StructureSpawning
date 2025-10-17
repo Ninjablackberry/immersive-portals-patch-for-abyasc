@@ -1,0 +1,53 @@
+package com.jkdr.abyssalascentdimensionpatcher.util;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.Mirror;
+import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplateManager;
+
+import java.util.Optional;
+
+public class StructureSpawning {
+
+    /**
+     * Spawns a structure at the given position in the world.
+     *
+     * @param level The ServerLevel to spawn the structure in.
+     * @param pos   The BlockPos where the structure should be placed.
+     * @param structureRL The ResourceLocation of the structure to spawn.
+     * @return true if the structure was successfully placed, false otherwise.
+     */
+    public static boolean createSpawnStructure(ServerLevel level, BlockPos pos) {
+        ResourceLocation structureRL = new ResourceLocation("abyssalascentdimensionpatcher", "abyssal_spawn_structure");
+        // Get the StructureTemplateManager from the server level
+        StructureTemplateManager templateManager = level.getStructureManager();
+
+        // Try to load the structure template
+        Optional<StructureTemplate> optionalTemplate = templateManager.get(structureRL);
+
+        if (optionalTemplate.isPresent()) {
+            StructureTemplate template = optionalTemplate.get();
+
+            // Configure the placement settings
+            StructurePlaceSettings placementSettings = new StructurePlaceSettings()
+                    .setRotation(Rotation.NONE)
+                    .setMirror(Mirror.NONE)
+                    .setIgnoreEntities(false); // Set to true if you don't want to spawn entities from the structure
+
+            // Place the structure in the world
+            // The third parameter is the pivot point for rotation, which is often the same as the placement position.
+            boolean placed = template.placeInWorld(level, pos, pos, placementSettings, level.getRandom(), 2);
+
+            return placed;
+        } else {
+            // Log an error if the structure couldn't be found
+            // It's good practice to have a logger for your mod
+            // YourMod.LOGGER.error("Could not find structure: " + structureRL);
+            return false;
+        }
+    }
+}
