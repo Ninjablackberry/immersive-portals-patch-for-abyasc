@@ -1,0 +1,240 @@
+package com.jkdr.abyssalascentdimensionpatcher.eventHooks;
+
+import com.jkdr.abyssalascentdimensionpatcher.AbyssalAscentDimensionPatcher;
+import com.jkdr.abyssalascentdimensionpatcher.data.SpawnPosData;
+import com.jkdr.abyssalascentdimensionpatcher.mixins.MixinPlayerRespawnLogic;
+import com.jkdr.abyssalascentdimensionpatcher.util.ModInternalConfig;
+import com.jkdr.abyssalascentdimensionpatcher.util.PatchouliBookManager;
+import com.jkdr.abyssalascentdimensionpatcher.util.ServerMessages;
+import com.jkdr.abyssalascentdimensionpatcher.util.StructureSpawning;
+import net.minecraftforge.event.entity.player.PlayerEvent.PlayerRespawnEvent;
+import com.mojang.datafixers.util.Pair;
+import com.mojang.logging.LogUtils;
+import net.minecraft.advancements.Advancement;
+import net.minecraft.advancements.AdvancementProgress;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.PlayerRespawnLogic;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.BiomeSource;
+import net.minecraft.world.level.biome.Climate;
+import net.minecraft.world.level.chunk.ChunkGenerator;
+import net.minecraft.world.level.levelgen.RandomState;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import org.slf4j.Logger;
+
+import java.util.function.Predicate;
+
+@Mod.EventBusSubscriber(modid = AbyssalAscentDimensionPatcher.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
+public class playerSpawnEvents {
+    private static final Logger LOGGER = LogUtils.getLogger();
+
+    //Just a lush area and a nice place to start
+    private static final ResourceKey<Biome> FORCESPAWNINBIOME = ResourceKey.create(
+        Registries.BIOME, new ResourceLocation("undergarden", "gronglegrowth")
+    );
+
+    @SubscribeEvent
+    public static void onPlayerFirstJoin(PlayerEvent.PlayerLoggedInEvent event) {
+        ServerPlayer player = (ServerPlayer) event.getEntity();
+        CompoundTag persistent = player.getPersistentData().getCompound(Player.PERSISTED_NBT_TAG);
+
+        MinecraftServer server = player.getServer();
+        if (server == null) return;
+         ServerLevel undergardenLevel = server.getLevel(ModInternalConfig.playerSpawnDimension);
+        spawnStructure(player, undergardenLevel);
+
+        if (persistent.getBoolean(ModInternalConfig.FIRST_JOIN_TAG)) {
+            // Player has joined before with this mod logic, do nothing.
+            return;
+        }
+        persistent.putBoolean(ModInternalConfig.FIRST_JOIN_TAG, true);
+        player.getPersistentData().put(Player.PERSISTED_NBT_TAG, persistent);
+
+        // Send welcome message regardless of spawn location
+        ServerMessages.welcome(player);
+
+       
+
+        // Don't teleport players who already have a bed spawn or have already been handled before
+        if (player.getRespawnPosition() != null) {
+            return;
+        }
+
+        PatchouliBookManager.givePlayerPatchouliBook(player);
+
+        // We ONLY teleport the player if they have never entered the nether before
+        ResourceLocation netherAdvancementRL = new ResourceLocation("minecraft", "nether/root");
+        Advancement netherAdvancement = player.getServer().getAdvancements().getAdvancement(netherAdvancementRL);
+        if (netherAdvancement == null) return; // Should not happen
+        AdvancementProgress advancementProgress = player.getAdvancements().getOrStartProgress(netherAdvancement);
+
+
+        if (undergardenLevel == null) {
+            LOGGER.error("The Undergarden dimension was not found! Ca {nnot set spawn. Is The Undergarden mod installed?");
+            return;
+        }
+
+        // Teleport the player to the Undergarden's spawn point.
+        BlockPos rawPos = getSpawnCoordinates(undergardenLevel);
+        BlockPos adjustedPos = new BlockPos(
+            rawPos.getX() - 5,
+            rawPos.getY() + 1,
+            rawPos.getZ() + 3
+        );
+
+        if (player.level().dimension() == Level.OVERWORLD || advancementProgress.isDone()) {
+            player.teleportTo(
+                undergardenLevel, 
+                adjustedPos.getX() + 0.5, 
+                adjustedPos.getY(), 
+                adjustedPos.getZ() + 0.5, 
+                player.getYRot(), 
+                player.getXRot()
+            );
+        }
+        // Setting the "forced" parameter to false ensures the spawnpoint does not get override a bed (the 4th argument)
+        player.setRespawnPosition(ModInternalConfig.playerSpawnDimension, adjustedPos, 0, false, false);
+    }
+
+    @SubscribeEvent
+    public static void onPlayerRespawn(PlayerRespawnEvent event) {
+        if (event.isEndConquered()) return; // Don't interfere with end credits
+        
+        ServerPlayer player = (ServerPlayer) event.getEntity();
+
+        // Always give a book on respawn if they are supposed to have one
+        PatchouliBookManager.givePlayerPatchouliBook(player);
+        
+        // If the player has a bed spawn, Minecraft handles it.
+        if (player.getRespawnPosition() != null) {
+            return;
+        }
+
+        // Don't teleport players who already have a bed spawn or have already been handled before
+        if (player.getRespawnPosition() != null || player.level().dimension() != Level.OVERWORLD) {
+            return;
+        }
+        
+        MinecraftServer server = player.getServer();
+        if (server == null) return;
+
+        ServerLevel undergardenLevel = server.getLevel(ModInternalConfig.playerSpawnDimension);
+        if (undergardenLevel == null) {
+            LOGGER.error("The Undergarden dimension was not found! Cannot handle respawn.");
+            return;
+        }
+
+        //Dont call if player is already in the undergarden
+        if (player.level() == undergardenLevel) {
+            return;
+        }
+
+        BlockPos rawPos = getSpawnCoordinates(undergardenLevel);
+        BlockPos adjustedPos = new BlockPos(
+            rawPos.getX() - 5,
+            rawPos.getY() + 1,
+            rawPos.getZ() + 3
+        );
+
+        // Manually set the player's position on respawn
+        player.teleportTo(
+            undergardenLevel, 
+            adjustedPos.getX() + 0.5, 
+            adjustedPos.getY(), 
+            adjustedPos.getZ() + 0.5, 
+            player.getYRot(), 
+            player.getXRot()
+        );
+    }
+
+    public static BlockPos getSpawnCoordinates(ServerLevel level) {
+        SpawnPosData spawnData = SpawnPosData.get(level);
+        BlockPos customSpawnPos = spawnData.getSpawnPos();
+
+        if (customSpawnPos == null) {
+            
+
+            //Create new spawnpoint if it couldnt be found.
+            BlockPos bedCompatibleSpawn = PlayerRespawnLogic.getSpawnPosInChunk(level, new ChunkPos(level.getSharedSpawnPos()));
+            
+            Predicate<Holder<Biome>> biomePredicate = (biomeHolder) -> biomeHolder.is(FORCESPAWNINBIOME);
+            BiomeSource biomeSource = level.getChunkSource().getGenerator().getBiomeSource();
+            RandomState randomState = level.getChunkSource().randomState();
+
+            Climate.Sampler sampler = randomState.sampler();
+            RandomSource random = level.getRandom();
+            int searchRadiusInQuarts = 3200 / 4;
+
+            // Search for the closest biome using the correct method on the BiomeSource.
+            Pair<BlockPos, Holder<Biome>> biomeResult = biomeSource.findBiomeHorizontal(
+                bedCompatibleSpawn.getX() / 4,
+                bedCompatibleSpawn.getY(),
+                bedCompatibleSpawn.getZ() / 4,
+                searchRadiusInQuarts,
+                biomePredicate,
+                random, // The required RandomSource
+                sampler // The required Climate.Sampler
+             );
+
+            if (biomeResult != null) {
+                bedCompatibleSpawn = biomeResult.getFirst();
+            }
+
+            spawnData.setSpawnPos(bedCompatibleSpawn);
+
+            return bedCompatibleSpawn; 
+        }
+
+        return customSpawnPos;
+    }
+
+    private static void spawnStructure(ServerPlayer player, ServerLevel level) {
+        SpawnPosData spawnData = SpawnPosData.get(level);
+        BlockPos customSpawnPos = spawnData.getSpawnPos();
+        if (customSpawnPos != null) {
+            return;
+        }
+        LOGGER.info("Building spawn structure, didnt exist before");
+
+        BlockPos spawnData = getSpawnCoordinates(level);
+
+        BlockPos offsetStructure = new BlockPos(
+            spawnData.getX() - 7,
+            spawnData.getY() - 4,
+            spawnData.getZ() -1 
+        );
+
+        LOGGER.info("{}", offsetStructure);
+
+        StructureSpawning.createSpawnStructure(level, offsetStructure);
+    }
+
+    private static BlockPos findSafeSpawnLocation(ServerLevel level, BlockPos startPos, int topY) {
+        for (int y = topY; y > level.getMinBuildHeight(); --y) {
+            BlockPos currentPos = new BlockPos(startPos.getX(), y, startPos.getZ());
+            if (!level.getBlockState(currentPos).isAir()) {
+                BlockPos spawnPos = currentPos.above();
+                // Check for a 2-block high space
+                if (level.getBlockState(spawnPos).isAir() && level.getBlockState(spawnPos.above()).isAir()) {
+                    return spawnPos;
+                }
+            }
+        }
+        // Fallback if no safe spot is found, though unlikely
+        return null;
+    }
+}
