@@ -1,0 +1,58 @@
+package com.jkdr.abyssalascentdimensionpatcher.util;
+
+import net.minecraft.server.level.ServerPlayer;
+
+public class ServerMessages {
+    public static void welcome(ServerPlayer player) {
+        player.sendSystemMessage(FormattingCore.serverTranslate(
+            "message.abyssalascentdimensionpatcher.welcome", 
+            FormattingCore.createPrefixWithFormatting(),
+            ModInternalConfig.DISCORD_CMD, 
+            FormattingCore.createCommandClickableComponent(ModInternalConfig.DISCORD_CMD))
+        );
+    }
+
+    public static void bookDisabled(ServerPlayer player) {
+        player.sendSystemMessage(FormattingCore.serverTranslate(
+            "message.abyssalascentdimensionpatcher.bookdisabled", 
+            FormattingCore.createPrefixWithFormatting(),
+            ModInternalConfig.BOOK_TOGGLE_CMD, 
+            FormattingCore.createCommandClickableComponent(ModInternalConfig.BOOK_TOGGLE_CMD))
+        );
+    }
+
+    public static void bookEnabled(ServerPlayer player) {
+        player.sendSystemMessage(FormattingCore.serverTranslate(
+            "message.abyssalascentdimensionpatcher.bookenabled", 
+            FormattingCore.createPrefixWithFormatting(),
+            ModInternalConfig.BOOK_TOGGLE_CMD, 
+            FormattingCore.createCommandClickableComponent(ModInternalConfig.BOOK_TOGGLE_CMD))
+        );
+    }
+
+    public static void bookNowEnabled(ServerPlayer player) {
+        player.sendSystemMessage(FormattingCore.serverTranslate(
+            "message.abyssalascentdimensionpatcher.set.bookenabled", 
+            FormattingCore.createPrefixWithFormatting(),
+            ModInternalConfig.BOOK_TOGGLE_CMD, 
+            FormattingCore.createCommandClickableComponent(ModInternalConfig.BOOK_TOGGLE_CMD))
+        );
+    }
+
+    public static void bookNowDisabled(ServerPlayer player) {
+        player.sendSystemMessage(FormattingCore.serverTranslate(
+            "message.abyssalascentdimensionpatcher.set.bookdisabled", 
+            FormattingCore.createPrefixWithFormatting(),
+            ModInternalConfig.BOOK_TOGGLE_CMD, 
+            FormattingCore.createCommandClickableComponent(ModInternalConfig.BOOK_TOGGLE_CMD))
+        );
+    }
+
+    public static void discord(ServerPlayer player) {
+        player.sendSystemMessage(FormattingCore.serverTranslate(
+            "message.abyssalascentdimensionpatcher.discordnotice", // Corrected message key
+            FormattingCore.createPrefixWithFormatting(),
+            FormattingCore.createExternalLinkClickableComponent(ModInternalConfig.DISCORD_INVITE, true))
+        );
+    }
+}
