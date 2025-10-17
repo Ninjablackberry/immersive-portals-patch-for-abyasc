@@ -1,64 +1,22 @@
 package com.jkdr.abyssalascentdimensionpatcher.commands;
 
-import com.jkdr.abyssalascentdimensionpatcher.mixins.MixinPlayerRespawnLogic;
-import net.minecraft.server.MinecraftServer;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.entity.player.PlayerEvent.PlayerRespawnEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.registries.ForgeRegistries;
-import org.slf4j.Logger;
-import com.mojang.logging.LogUtils;
-import net.minecraft.locale.Language;
-
-// World & Dimension
-import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.Level;
-import net.minecraft.server.level.PlayerRespawnLogic;
-import net.minecraft.advancements.Advancement;
-import net.minecraft.advancements.AdvancementProgress;
-
-// Player & Entity
+import com.jkdr.abyssalascentdimensionpatcher.AbyssalAscentDimensionPatcher;
+import com.jkdr.abyssalascentdimensionpatcher.util.ModInternalConfig;
+import com.jkdr.abyssalascentdimensionpatcher.util.ServerMessages;
+import net.minecraft.commands.Commands;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-
-// Items & NBT Data
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
-
-// Chat Components & Formatting (for messages)
-import net.minecraft.ChatFormatting;
-import net.minecraft.network.chat.ClickEvent;
-import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.HoverEvent;
-import net.minecraft.network.chat.Style;
 import net.minecraftforge.event.RegisterCommandsEvent;
-
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import net.minecraft.commands.Commands;
-import net.minecraft.commands.arguments.EntityArgument;
-import net.minecraft.world.level.Level;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
-
-import com.jkdr.abyssalascentdimensionpatcher.PatchouliBookManager;
-import com.jkdr.abyssalascentdimensionpatcher.AACOREConfigValues;
-import com.jkdr.abyssalascentdimensionpatcher.AbyssalAscentDimensionPatcher;
-
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 
 @Mod.EventBusSubscriber(modid = AbyssalAscentDimensionPatcher.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class BookToggler {
 	@SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
         event.getDispatcher().register(
-            Commands.literal(AACOREConfigValues.BOOK_TOGGLE_CMD)
+            Commands.literal(ModInternalConfig.BOOK_TOGGLE_CMD)
                 .executes(context -> {
                     ServerPlayer player = context.getSource().getPlayerOrException();
                     toggleGuideTag(player);
@@ -71,13 +29,16 @@ public class BookToggler {
     private static void toggleGuideTag(ServerPlayer player) {
         CompoundTag persistent = player.getPersistentData().getCompound(Player.PERSISTED_NBT_TAG);
 
-        boolean current = persistent.getBoolean(AACOREConfigValues.DISABLE_GUIDE_TAG);
-        persistent.putBoolean(AACOREConfigValues.DISABLE_GUIDE_TAG, !current);
+        boolean isDisabled = persistent.getBoolean(ModInternalConfig.DISABLE_GUIDE_TAG);
+        persistent.putBoolean(ModInternalConfig.DISABLE_GUIDE_TAG, !isDisabled);
 
         player.getPersistentData().put(Player.PERSISTED_NBT_TAG, persistent);
 
-        player.sendSystemMessage(Component.literal(
-            "Guide Enabled set to " + (current)
-        ));
+        // Send feedback message based on the NEW state
+        if (!isDisabled) { // It is now disabled
+            ServerMessages.bookNowDisabled(player);
+        } else { // It is now enabled
+            ServerMessages.bookNowEnabled(player);
+        }
     }
 }
