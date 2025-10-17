@@ -34,13 +34,29 @@ import net.minecraft.world.level.levelgen.RandomState;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import com.google.common.collect.ImmutableSet;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.world.level.block.Block;
 import org.slf4j.Logger;
+
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import java.util.function.Predicate;
 
 @Mod.EventBusSubscriber(modid = AbyssalAscentDimensionPatcher.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class playerSpawnEvents {
     private static final Logger LOGGER = LogUtils.getLogger();
+
+    private static final Set<Block> VALID_GROUND_BLOCKS = ImmutableSet.of(
+        ForgeRegistries.BLOCKS.getValue(new ResourceLocation("undergarden", "deepturf_block")),
+        ForgeRegistries.BLOCKS.getValue(new ResourceLocation("undergarden", "sediment")),
+        ForgeRegistries.BLOCKS.getValue(new ResourceLocation("undergarden", "ashen_deepturf_block")),
+        ForgeRegistries.BLOCKS.getValue(new ResourceLocation("undergarden", "frozen_deepturf_block")),
+        ForgeRegistries.BLOCKS.getValue(new ResourceLocation("undergarden", "depthrock")),
+        ForgeRegistries.BLOCKS.getValue(new ResourceLocation("undergarden", "shiverstone"))
+    ).stream().filter(Objects::nonNull).collect(ImmutableSet.toImmutableSet());
 
     //Just a lush area and a nice place to start
     private static final ResourceKey<Biome> FORCESPAWNINBIOME = ResourceKey.create(
@@ -169,7 +185,7 @@ public class playerSpawnEvents {
             
 
             //Create new spawnpoint if it couldnt be found.
-            BlockPos bedCompatibleSpawn = PlayerRespawnLogic.getSpawnPosInChunk(level, new ChunkPos(level.getSharedSpawnPos()));
+            BlockPos bedCompatibleSpawn = level.getSharedSpawnPos();
             
             Predicate<Holder<Biome>> biomePredicate = (biomeHolder) -> biomeHolder.is(FORCESPAWNINBIOME);
             BiomeSource biomeSource = level.getChunkSource().getGenerator().getBiomeSource();
@@ -194,6 +210,7 @@ public class playerSpawnEvents {
                 bedCompatibleSpawn = biomeResult.getFirst();
             }
 
+            BlockPos finalSpawnPos = findSafeSpotNearby(level, bedCompatibleSpawn, 16);
             spawnData.setSpawnPos(bedCompatibleSpawn);
 
             return bedCompatibleSpawn; 
@@ -210,12 +227,12 @@ public class playerSpawnEvents {
         }
         LOGGER.info("Building spawn structure, didnt exist before");
 
-        BlockPos spawnData = getSpawnCoordinates(level);
+        BlockPos spawnBlockData = getSpawnCoordinates(level);
 
         BlockPos offsetStructure = new BlockPos(
-            spawnData.getX() - 7,
-            spawnData.getY() - 4,
-            spawnData.getZ() -1 
+            spawnBlockData.getX() - 7,
+            spawnBlockData.getY() - 4,
+            spawnBlockData.getZ() -1 
         );
 
         LOGGER.info("{}", offsetStructure);
@@ -223,18 +240,75 @@ public class playerSpawnEvents {
         StructureSpawning.createSpawnStructure(level, offsetStructure);
     }
 
-    private static BlockPos findSafeSpawnLocation(ServerLevel level, BlockPos startPos, int topY) {
-        for (int y = topY; y > level.getMinBuildHeight(); --y) {
-            BlockPos currentPos = new BlockPos(startPos.getX(), y, startPos.getZ());
-            if (!level.getBlockState(currentPos).isAir()) {
-                BlockPos spawnPos = currentPos.above();
-                // Check for a 2-block high space
-                if (level.getBlockState(spawnPos).isAir() && level.getBlockState(spawnPos.above()).isAir()) {
-                    return spawnPos;
+    private static boolean isSpawnValid(ServerLevel level, BlockPos pos) {
+        if (pos == null) {
+            return false;
+        }
+        
+        // 1. Get the block the player will be standing ON.
+        Block groundBlock = level.getBlockState(pos.below()).getBlock();
+
+        // 2. Perform all three checks in one return statement.
+        return VALID_GROUND_BLOCKS.contains(groundBlock) &&      // Is the ground valid?
+               level.getBlockState(pos).isAir() &&               // Is the feet space air?
+               level.getBlockState(pos.above()).isAir();         // Is the head space air?
+    }
+
+    public static BlockPos findSafeSpotNearby(ServerLevel level, BlockPos initialPos, int searchRadius) {
+        if (isSpawnValid(level, initialPos)) {
+            return initialPos;
+        }
+
+        // If not, start searching in an expanding box around the initial point.
+        // We use the SafeSpawnFinder's top-down scan on each column in the search area.
+        for (int xOffset = -searchRadius* 16; xOffset <= searchRadius; xOffset += 16) {
+            for (int zOffset = -searchRadius* 16; zOffset <= searchRadius; zOffset += 16) {
+
+                if (xOffset == 0 && zOffset == 0) continue;
+
+                BlockPos searchColumn = initialPos.offset(xOffset, 0, zOffset);
+
+                ChunkPos targetChunk = new ChunkPos(searchColumn);
+                level.getChunk(targetChunk.x, targetChunk.z);
+
+                // Use the reliable top-down scan for this new column
+                BlockPos potentialSpot = findSafeSpawnablePos(level, PlayerRespawnLogic.getSpawnPosInChunk(level, new ChunkPos(searchColumn)));
+
+                if (isSpawnValid(level, potentialSpot)) {
+                    // We found a valid spot in a nearby chunk/column!
+                    return potentialSpot;
                 }
             }
         }
-        // Fallback if no safe spot is found, though unlikely
+
+        // If the entire search fails, return null.
         return null;
+    }
+
+    public static BlockPos findSafeSpawnablePos(ServerLevel level, BlockPos targetPos) {
+        if (targetPos == null) {
+            return null; // Prevent crashes if a null position is passed in
+        }
+
+        int x = targetPos.getX();
+        int z = targetPos.getZ();
+
+        // Start from the logical top of the world and scan downwards.
+        for (int y = level.getLogicalHeight(); y > level.getMinBuildHeight(); y--) {
+            BlockPos currentPos = new BlockPos(x, y, z);
+            
+            // Check if the block *below* the current position is solid (i.e., it's ground)
+            if (!level.getBlockState(currentPos.below()).isAir()) {
+                BlockPos headPos = currentPos.above(); // Player's head will be here.
+
+                // Check if the spot for the feet AND the head are both air.
+                if (level.getBlockState(currentPos).isAir() && level.getBlockState(headPos).isAir()) {
+                    // This is a safe spot! Return the position for the player's feet.
+                    return currentPos; 
+                }
+            }
+        }
+        // If the loop finishes without finding a spot, return null.
+        return null; 
     }
 }
