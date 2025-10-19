@@ -9,6 +9,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraftforge.registries.ForgeRegistries;
+import com.jkdr.abyssalascentdimensionpatcher.util.ServerMessages;
 import org.slf4j.Logger;
 
 public class PatchouliBookManager {
