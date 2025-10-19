@@ -1,8 +1,26 @@
 package com.jkdr.abyssalascentdimensionpatcher.util;
 
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.core.Holder;
+import net.minecraft.network.protocol.game.ClientboundSoundPacket;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.registries.ForgeRegistries;
+import com.jkdr.abyssalascentdimensionpatcher.util.ModInternalConfig;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+
+import java.util.Optional;
 
 public class ServerMessages {
+    public static final SoundEvent BLOCKBREAKSOUND = ForgeRegistries.SOUND_EVENTS.getValue(ModInternalConfig.blockBreakFailSoundLocation);
+    private static Optional<Holder<SoundEvent>> optionalHolder = ForgeRegistries.SOUND_EVENTS.getHolder(BLOCKBREAKSOUND);
+
     public static void welcome(ServerPlayer player) {
         player.sendSystemMessage(FormattingCore.serverTranslate(
             "message.abyssalascentdimensionpatcher.welcome", 
@@ -50,9 +68,27 @@ public class ServerMessages {
 
     public static void discord(ServerPlayer player) {
         player.sendSystemMessage(FormattingCore.serverTranslate(
-            "message.abyssalascentdimensionpatcher.discordnotice", // Corrected message key
+            "message.abyssalascentdimensionpatcher.discordnotice",
             FormattingCore.createPrefixWithFormatting(),
             FormattingCore.createExternalLinkClickableComponent(ModInternalConfig.DISCORD_INVITE, true))
         );
+    }
+
+    public static void pickaxeWeak(ServerPlayer player, BlockPos sourceBlock) {
+        //Play the sound at the block to everyone to give more feedback the block cannot be broken
+        if (BLOCKBREAKSOUND != null) {
+            player.level().playSound(
+                null, // null = broadcast to all players nearby
+                sourceBlock.getX() + 0.5,
+                sourceBlock.getY() + 0.5,
+                sourceBlock.getZ() + 0.5,
+                BLOCKBREAKSOUND,
+                SoundSource.BLOCKS,
+                1.0F,
+                1.0F
+            );
+        }
+
+        player.sendSystemMessage(FormattingCore.serverTranslate("message.abyssalascentdimensionpatcher.failedBlockBreak", ChatFormatting.RED), true);
     }
 }
