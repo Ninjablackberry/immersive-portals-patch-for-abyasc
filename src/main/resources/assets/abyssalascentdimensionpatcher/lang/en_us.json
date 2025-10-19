@@ -10,5 +10,7 @@
   "message.abyssalascentdimensionpatcher.set.bookdisabled": "%s Guide on spawn is now DISABLED. To change this type '/%s' or %s",
 
   "message.abyssalascentdimensionpatcher.setbookenabled": "%s You have now set the guide to spawn on death. %s to change",
-  "message.abyssalascentdimensionpatcher.setbookdisabled": "%s You have now set the guide to not spawn on death. %s to change"
+  "message.abyssalascentdimensionpatcher.setbookdisabled": "%s You have now set the guide to not spawn on death. %s to change",
+
+  "message.abyssalascentdimensionpatcher.failedBlockBreak": "Your pickaxe is too weak to break this block!"
 }
