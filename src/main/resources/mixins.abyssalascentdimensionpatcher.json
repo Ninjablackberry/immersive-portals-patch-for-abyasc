@@ -6,8 +6,10 @@
   "mixins": [
     "MixinServerTeleportationManager",
     "AbyssalAscent_ServerPlayerGameMode_Patch",
-    "MixinPlayerRespawnLogic"
+    "MixinPlayerRespawnLogic",
+    "MixinServerLevel"
   ],
+  "client": [],
   "injectors": {
     "defaultRequire": 1
   }
