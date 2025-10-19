@@ -18,6 +18,15 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.objectweb.asm.Opcodes;
 
+import com.jkdr.abyssalascentdimensionpatcher.data.dimensionRoofData;
+// Import the new interface
+import com.jkdr.abyssalascentdimensionpatcher.interfaces.ServerLevelDataAccessor; 
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import net.minecraft.core.BlockPos;
+
+import com.jkdr.abyssalascentdimensionpatcher.util.ServerMessages;
+
 @Mixin(value = ServerPlayerGameMode.class, priority = 2000)
 public abstract class AbyssalAscent_ServerPlayerGameMode_Patch {
 
@@ -28,20 +37,34 @@ public abstract class AbyssalAscent_ServerPlayerGameMode_Patch {
     @Shadow
     private ServerLevel level;
 
-    //Gets the ACTUAL world provided by immptlcore
     private ServerLevel ip_getActualWorld() {
-        //Get the saved server level when the player did an action from another dimension, if it is null it means the player did a regular action and immersive portals will let the vanilla / other mods handle it
         ServerLevel redirect = BlockManipulationServer.SERVER_PLAYER_INTERACTION_REDIRECT.get();
         if (redirect != null) {
-            //Take over and send the correct dimension
             return redirect;
         }
-        //Continue as normal
         return level;
+    }
+
+    @Inject(method = "destroyBlock", at = @At("HEAD"), cancellable = true)
+    private void checkRoofBlock(BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
+        ServerLevel level = ip_getActualWorld();
+        
+        // FIX: Cast 'level' to the interface to access the mixin-added method
+        dimensionRoofData roofData = ((ServerLevelDataAccessor) level).getRoofData();
+
+        boolean allowed = roofData.ValidateAbyAscBlockBreak(pos, player);
+
+        if (!allowed) {
+            ServerMessages.pickaxeWeak(player, pos);
+
+            cir.setReturnValue(false); // cancels the method, returns false
+        }
+
     }
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
+    //THIS FUNCTION DOES WORK AS INTENDED BUT THERE IS ANOTHER CHECK PREVENTING THE BLOCK FROM BREAKING.
     //Wrap operation does not change the method but waits until "canReachRaw" is called and changes the value depending on if it is through a portal.
     @WrapOperation(
         method = "handleBlockBreakAction",
@@ -60,7 +83,6 @@ public abstract class AbyssalAscent_ServerPlayerGameMode_Patch {
         return original.call(instance, blockPos, v); //Is normal, continue with operation.
     }
 
-    //Get this method added by a mod which caused incompatibility
     @Redirect(
         method = {
             "removeBlock(Lnet/minecraft/core/BlockPos;Z)Z"
@@ -74,6 +96,6 @@ public abstract class AbyssalAscent_ServerPlayerGameMode_Patch {
     private ServerLevel redirectGetLevel(
         ServerPlayerGameMode serverPlayerGameMode
     ) {
-        return ip_getActualWorld(); //On the value retrieved, return the correct dimension now allowing the proper block to be processed into breaking.
+        return ip_getActualWorld();
     }
 }
