@@ -21,4 +21,7 @@ public class ModInternalConfig {
      //How the game interprets dimensions so the overworld is (minecraft, overworld), undergarden is (undergarden, undergarden)
      //Basically undergarden:undergarden
     public static final ResourceKey<Level> playerSpawnDimension = ResourceKey.create(Registries.DIMENSION, new ResourceLocation("undergarden","undergarden"));
+    public static final ResourceLocation blockBreakFailSoundLocation = new ResourceLocation("netherexp", "entity.banshee.hurt");
+
+
 }
