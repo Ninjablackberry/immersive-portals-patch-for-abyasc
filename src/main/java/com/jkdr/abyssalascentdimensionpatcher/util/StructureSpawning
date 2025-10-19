@@ -22,6 +22,8 @@ public class StructureSpawning {
      * @return true if the structure was successfully placed, false otherwise.
      */
     public static boolean createSpawnStructure(ServerLevel level, BlockPos pos) {
+        
+
         ResourceLocation structureRL = new ResourceLocation("abyssalascentdimensionpatcher", "abyssal_spawn_structure");
         // Get the StructureTemplateManager from the server level
         StructureTemplateManager templateManager = level.getStructureManager();
@@ -31,6 +33,7 @@ public class StructureSpawning {
 
         if (optionalTemplate.isPresent()) {
             StructureTemplate template = optionalTemplate.get();
+
 
             // Configure the placement settings
             StructurePlaceSettings placementSettings = new StructurePlaceSettings()
