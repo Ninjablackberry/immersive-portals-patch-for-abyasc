@@ -36,29 +36,35 @@ public class FormattingCore {
         return Component.literal(ModInternalConfig.ABYSSAL_ASCENT_OWNER_PREFIX).withStyle(ChatFormatting.GRAY);
     }
 
-    public static Component serverTranslate(String key, Object... args) {
+    // Add a new overloaded method that accepts ChatFormatting
+    public static Component serverTranslate(String key, ChatFormatting format, Object... args) {
         // Get the translation string
         String raw = Language.getInstance().getOrDefault(key);
-
-        // Split the string by %s so we can inject components
         String[] parts = raw.split("%s", -1);
 
-        // Start building the result component
         MutableComponent result = Component.literal("");
 
         for (int i = 0; i < parts.length; i++) {
-            result.append(Component.literal(parts[i]));
+            // Apply the desired formatting to the static text parts
+            result.append(Component.literal(parts[i]).withStyle(format));
+        
             // Append the argument if it exists
             if (i < args.length) {
                 Object arg = args[i];
                 if (arg instanceof Component c) {
-                    result.append(c);
+                    result.append(c); // Arguments with their own style are preserved
                 } else {
-                    result.append(Component.literal(arg.toString()));
+                    // Also apply the format to plain string arguments
+                    result.append(Component.literal(arg.toString()).withStyle(format));
                 }
             }
         }
-
         return result;
+    }
+
+    // Keep your original method for translations that don't need special color
+    public static Component serverTranslate(String key, Object... args) {
+        // Just call the other method with a default color like GRAY or WHITE
+        return serverTranslate(key, ChatFormatting.WHITE, args);
     }
 }
