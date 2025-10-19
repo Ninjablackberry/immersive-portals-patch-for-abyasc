@@ -2,24 +2,18 @@ package com.jkdr.abyssalascentdimensionpatcher.eventHooks;
 
 import com.jkdr.abyssalascentdimensionpatcher.AbyssalAscentDimensionPatcher;
 import com.jkdr.abyssalascentdimensionpatcher.data.SpawnPosData;
-import com.jkdr.abyssalascentdimensionpatcher.mixins.MixinPlayerRespawnLogic;
 import com.jkdr.abyssalascentdimensionpatcher.util.ModInternalConfig;
 import com.jkdr.abyssalascentdimensionpatcher.util.PatchouliBookManager;
 import com.jkdr.abyssalascentdimensionpatcher.util.ServerMessages;
 import com.jkdr.abyssalascentdimensionpatcher.util.StructureSpawning;
-import net.minecraftforge.event.entity.player.PlayerEvent.PlayerRespawnEvent;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
-import net.minecraft.advancements.Advancement;
-import net.minecraft.advancements.AdvancementProgress;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.PlayerRespawnLogic;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
@@ -28,153 +22,132 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeSource;
-import net.minecraft.world.level.biome.Climate;
-import net.minecraft.world.level.chunk.ChunkGenerator;
-import net.minecraft.world.level.levelgen.RandomState;
+import net.minecraft.world.level.chunk.ChunkAccess;
+import net.minecraft.world.level.chunk.ChunkStatus;
+import net.minecraft.world.level.chunk.ChunkSource;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent.PlayerRespawnEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraft.world.level.levelgen.RandomState;
+import net.minecraft.world.level.biome.Climate;
 import net.minecraftforge.fml.common.Mod;
 import com.google.common.collect.ImmutableSet;
 import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraft.world.level.block.Block;
 import org.slf4j.Logger;
 
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
-
 import java.util.function.Predicate;
 
 @Mod.EventBusSubscriber(modid = AbyssalAscentDimensionPatcher.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class playerSpawnEvents {
     private static final Logger LOGGER = LogUtils.getLogger();
+    private static Set<Block> VALID_GROUND_BLOCKS = null;
 
-    private static final Set<Block> VALID_GROUND_BLOCKS = ImmutableSet.of(
-        ForgeRegistries.BLOCKS.getValue(new ResourceLocation("undergarden", "deepturf_block")),
-        ForgeRegistries.BLOCKS.getValue(new ResourceLocation("undergarden", "sediment")),
-        ForgeRegistries.BLOCKS.getValue(new ResourceLocation("undergarden", "ashen_deepturf_block")),
-        ForgeRegistries.BLOCKS.getValue(new ResourceLocation("undergarden", "frozen_deepturf_block")),
-        ForgeRegistries.BLOCKS.getValue(new ResourceLocation("undergarden", "depthrock")),
-        ForgeRegistries.BLOCKS.getValue(new ResourceLocation("undergarden", "shiverstone"))
-    ).stream().filter(Objects::nonNull).collect(ImmutableSet.toImmutableSet());
-
-    //Just a lush area and a nice place to start
     private static final ResourceKey<Biome> FORCESPAWNINBIOME = ResourceKey.create(
-        Registries.BIOME, new ResourceLocation("undergarden", "gronglegrowth")
+            Registries.BIOME, new ResourceLocation("undergarden", "gronglegrowth")
     );
 
-    @SubscribeEvent
-    public static void onPlayerFirstJoin(PlayerEvent.PlayerLoggedInEvent event) {
-        ServerPlayer player = (ServerPlayer) event.getEntity();
-        CompoundTag persistent = player.getPersistentData().getCompound(Player.PERSISTED_NBT_TAG);
-
-        MinecraftServer server = player.getServer();
-        if (server == null) return;
-         ServerLevel undergardenLevel = server.getLevel(ModInternalConfig.playerSpawnDimension);
-        spawnStructure(player, undergardenLevel);
-
-        if (persistent.getBoolean(ModInternalConfig.FIRST_JOIN_TAG)) {
-            // Player has joined before with this mod logic, do nothing.
-            return;
+    private static Set<Block> getValidGroundBlocks() {
+        // Check if the set hasn't been created yet
+        if (VALID_GROUND_BLOCKS == null) {
+            // If not, build it now. At this point in the game, the registries are guaranteed to be full.
+            VALID_GROUND_BLOCKS = ImmutableSet.of(
+                ForgeRegistries.BLOCKS.getValue(new ResourceLocation("undergarden", "deepturf_block")),
+                ForgeRegistries.BLOCKS.getValue(new ResourceLocation("undergarden", "frozen_deepturf_block")),
+                ForgeRegistries.BLOCKS.getValue(new ResourceLocation("undergarden", "deepsoil"))
+            ).stream()
+             .filter(Objects::nonNull).filter(block -> block != Blocks.AIR) // Still good practice to keep this filter
+             .collect(ImmutableSet.toImmutableSet());
+            LOGGER.info("Built the valid ground blocks set. Found {} blocks.", VALID_GROUND_BLOCKS.size());
         }
-        persistent.putBoolean(ModInternalConfig.FIRST_JOIN_TAG, true);
-        player.getPersistentData().put(Player.PERSISTED_NBT_TAG, persistent);
-
-        // Send welcome message regardless of spawn location
-        ServerMessages.welcome(player);
-
-       
-
-        // Don't teleport players who already have a bed spawn or have already been handled before
-        if (player.getRespawnPosition() != null) {
-            return;
-        }
-
-        PatchouliBookManager.givePlayerPatchouliBook(player);
-
-        // We ONLY teleport the player if they have never entered the nether before
-        ResourceLocation netherAdvancementRL = new ResourceLocation("minecraft", "nether/root");
-        Advancement netherAdvancement = player.getServer().getAdvancements().getAdvancement(netherAdvancementRL);
-        if (netherAdvancement == null) return; // Should not happen
-        AdvancementProgress advancementProgress = player.getAdvancements().getOrStartProgress(netherAdvancement);
-
-
-        if (undergardenLevel == null) {
-            LOGGER.error("The Undergarden dimension was not found! Ca {nnot set spawn. Is The Undergarden mod installed?");
-            return;
-        }
-
-        // Teleport the player to the Undergarden's spawn point.
-        BlockPos rawPos = getSpawnCoordinates(undergardenLevel);
-        BlockPos adjustedPos = new BlockPos(
-            rawPos.getX() - 5,
-            rawPos.getY() + 1,
-            rawPos.getZ() + 3
-        );
-
-        if (player.level().dimension() == Level.OVERWORLD || advancementProgress.isDone()) {
-            player.teleportTo(
-                undergardenLevel, 
-                adjustedPos.getX() + 0.5, 
-                adjustedPos.getY(), 
-                adjustedPos.getZ() + 0.5, 
-                player.getYRot(), 
-                player.getXRot()
-            );
-        }
-        // Setting the "forced" parameter to false ensures the spawnpoint does not get override a bed (the 4th argument)
-        player.setRespawnPosition(ModInternalConfig.playerSpawnDimension, adjustedPos, 0, false, false);
+        return VALID_GROUND_BLOCKS;
     }
 
     @SubscribeEvent
-    public static void onPlayerRespawn(PlayerRespawnEvent event) {
-        if (event.isEndConquered()) return; // Don't interfere with end credits
-        
+    public static void onPlayerFirstJoin(PlayerLoggedInEvent event) {
         ServerPlayer player = (ServerPlayer) event.getEntity();
-
-        // Always give a book on respawn if they are supposed to have one
-        PatchouliBookManager.givePlayerPatchouliBook(player);
-        
-        // If the player has a bed spawn, Minecraft handles it.
-        if (player.getRespawnPosition() != null) {
-            return;
-        }
-
-        // Don't teleport players who already have a bed spawn or have already been handled before
-        if (player.getRespawnPosition() != null || player.level().dimension() != Level.OVERWORLD) {
-            return;
-        }
-        
         MinecraftServer server = player.getServer();
         if (server == null) return;
 
         ServerLevel undergardenLevel = server.getLevel(ModInternalConfig.playerSpawnDimension);
         if (undergardenLevel == null) {
-            LOGGER.error("The Undergarden dimension was not found! Cannot handle respawn.");
+            LOGGER.error("Undergarden dimension not found! Cannot set spawn.");
             return;
         }
 
-        //Dont call if player is already in the undergarden
-        if (player.level() == undergardenLevel) {
-            return;
+        spawnStructure(player, undergardenLevel);
+
+        // Persistent data
+        var persistent = player.getPersistentData().getCompound(Player.PERSISTED_NBT_TAG);
+        if (!persistent.getBoolean(ModInternalConfig.FIRST_JOIN_TAG)) {
+            persistent.putBoolean(ModInternalConfig.FIRST_JOIN_TAG, true);
+            player.getPersistentData().put(Player.PERSISTED_NBT_TAG, persistent);
+            ServerMessages.welcome(player);
         }
+
+        PatchouliBookManager.givePlayerPatchouliBook(player);
+
+        // Only teleport if Overworld and first time
+        if (player.getRespawnPosition() == null) {
+            BlockPos rawPos = getSpawnCoordinates(undergardenLevel);
+            BlockPos adjustedPos = rawPos.offset(-5, 1, 3);
+
+            player.teleportTo(
+                    undergardenLevel,
+                    adjustedPos.getX() + 0.5,
+                    adjustedPos.getY(),
+                    adjustedPos.getZ() + 0.5,
+                    player.getYRot(),
+                    player.getXRot()
+            );
+            player.setRespawnPosition(ModInternalConfig.playerSpawnDimension, adjustedPos, 0, false, false);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerRespawn(PlayerRespawnEvent event) {
+        if (event.isEndConquered()) return;
+
+        ServerPlayer player = (ServerPlayer) event.getEntity();
+        PatchouliBookManager.givePlayerPatchouliBook(player);
+
+        if (player.getRespawnPosition() != null || player.level().dimension() != Level.OVERWORLD) return;
+
+        MinecraftServer server = player.getServer();
+        if (server == null) return;
+
+        ServerLevel undergardenLevel = server.getLevel(ModInternalConfig.playerSpawnDimension);
+        if (undergardenLevel == null) return;
+
+        if (player.level() == undergardenLevel) return;
 
         BlockPos rawPos = getSpawnCoordinates(undergardenLevel);
-        BlockPos adjustedPos = new BlockPos(
-            rawPos.getX() - 5,
-            rawPos.getY() + 1,
-            rawPos.getZ() + 3
-        );
+        BlockPos adjustedPos = rawPos.offset(-5, 1, 3);
 
-        // Manually set the player's position on respawn
         player.teleportTo(
-            undergardenLevel, 
-            adjustedPos.getX() + 0.5, 
-            adjustedPos.getY(), 
-            adjustedPos.getZ() + 0.5, 
-            player.getYRot(), 
-            player.getXRot()
+                undergardenLevel,
+                adjustedPos.getX() + 0.5,
+                adjustedPos.getY(),
+                adjustedPos.getZ() + 0.5,
+                player.getYRot(),
+                player.getXRot()
         );
+    }
+
+    private static void spawnStructure(ServerPlayer player, ServerLevel level) {
+        SpawnPosData spawnData = SpawnPosData.get(level);
+        if (spawnData.getSpawnPos() != null) return;
+
+        LOGGER.info("Building spawn structure, didn't exist before");
+        BlockPos spawnBlockData = getSpawnCoordinates(level);
+        BlockPos offsetStructure = spawnBlockData.offset(-7, -3, -1);
+
+        LOGGER.info("Structure offset: {}, ORIGINAL {}", offsetStructure, spawnBlockData);
+        StructureSpawning.createSpawnStructure(level, offsetStructure);
     }
 
     public static BlockPos getSpawnCoordinates(ServerLevel level) {
@@ -211,104 +184,88 @@ public class playerSpawnEvents {
             }
 
             BlockPos finalSpawnPos = findSafeSpotNearby(level, bedCompatibleSpawn, 16);
-            spawnData.setSpawnPos(bedCompatibleSpawn);
+            spawnData.setSpawnPos(finalSpawnPos);
 
-            return bedCompatibleSpawn; 
+            return finalSpawnPos; 
         }
 
         return customSpawnPos;
     }
 
-    private static void spawnStructure(ServerPlayer player, ServerLevel level) {
-        SpawnPosData spawnData = SpawnPosData.get(level);
-        BlockPos customSpawnPos = spawnData.getSpawnPos();
-        if (customSpawnPos != null) {
-            return;
-        }
-        LOGGER.info("Building spawn structure, didnt exist before");
+    public static BlockPos findSafeSpotNearby(ServerLevel level, BlockPos initialPos, int radiusChunks) {
+        int baseX = initialPos.getX();
+        int baseZ = initialPos.getZ();
 
-        BlockPos spawnBlockData = getSpawnCoordinates(level);
+        //Loop in the selected radius of chunks.
+        for (int dx = -radiusChunks; dx <= radiusChunks; dx++) {
+            for (int dz = -radiusChunks; dz <= radiusChunks; dz++) {
+                int chunkX = (baseX >> 4) + dx;
+                int chunkZ = (baseZ >> 4) + dz;
 
-        BlockPos offsetStructure = new BlockPos(
-            spawnBlockData.getX() - 7,
-            spawnBlockData.getY() - 4,
-            spawnBlockData.getZ() -1 
-        );
+                //Load the chunk so block data can be accessed
+                ChunkAccess chunk = level.getChunk(chunkX, chunkZ, ChunkStatus.FULL, true);
+                if (chunk == null) continue;
 
-        LOGGER.info("{}", offsetStructure);
+                int x = (chunkX << 4) + 8;
+                int z = (chunkZ << 4) + 8;
 
-        StructureSpawning.createSpawnStructure(level, offsetStructure);
-    }
-
-    private static boolean isSpawnValid(ServerLevel level, BlockPos pos) {
-        if (pos == null) {
-            return false;
-        }
-        
-        // 1. Get the block the player will be standing ON.
-        Block groundBlock = level.getBlockState(pos.below()).getBlock();
-
-        // 2. Perform all three checks in one return statement.
-        return VALID_GROUND_BLOCKS.contains(groundBlock) &&      // Is the ground valid?
-               level.getBlockState(pos).isAir() &&               // Is the feet space air?
-               level.getBlockState(pos.above()).isAir();         // Is the head space air?
-    }
-
-    public static BlockPos findSafeSpotNearby(ServerLevel level, BlockPos initialPos, int searchRadius) {
-        if (isSpawnValid(level, initialPos)) {
-            return initialPos;
-        }
-
-        // If not, start searching in an expanding box around the initial point.
-        // We use the SafeSpawnFinder's top-down scan on each column in the search area.
-        for (int xOffset = -searchRadius* 16; xOffset <= searchRadius; xOffset += 16) {
-            for (int zOffset = -searchRadius* 16; zOffset <= searchRadius; zOffset += 16) {
-
-                if (xOffset == 0 && zOffset == 0) continue;
-
-                BlockPos searchColumn = initialPos.offset(xOffset, 0, zOffset);
-
-                ChunkPos targetChunk = new ChunkPos(searchColumn);
-                level.getChunk(targetChunk.x, targetChunk.z);
-
-                // Use the reliable top-down scan for this new column
-                BlockPos potentialSpot = findSafeSpawnablePos(level, PlayerRespawnLogic.getSpawnPosInChunk(level, new ChunkPos(searchColumn)));
-
-                if (isSpawnValid(level, potentialSpot)) {
-                    // We found a valid spot in a nearby chunk/column!
-                    return potentialSpot;
-                }
+                BlockPos candidate = findValidSpawn(level, new BlockPos(x, level.getMaxBuildHeight() - 15, z));
+                if (candidate != null) return candidate;
             }
         }
 
-        // If the entire search fails, return null.
-        return null;
+        LOGGER.warn("No safe spawn found nearby, falling back to initialPos, NOT RECOMMENDED (CAN SPAWN IN WALLS)");
+        return initialPos;
     }
 
-    public static BlockPos findSafeSpawnablePos(ServerLevel level, BlockPos targetPos) {
-        if (targetPos == null) {
-            return null; // Prevent crashes if a null position is passed in
-        }
+    public static BlockPos findValidSpawn(ServerLevel level, BlockPos pos) {
+        int x = pos.getX(), z = pos.getZ();
+        int airLength = 0;
+        BlockPos lastRecordedAir = null;
+        //Get a rough method to check if the spawn is valid
+        for (int y = pos.getY(); y > level.getMinBuildHeight() + 30; y -= 4) {
+            BlockPos current = new BlockPos(x, y, z);
 
-        int x = targetPos.getX();
-        int z = targetPos.getZ();
+            //If the block is not air we reset the count (need atleast 3 times in a row)
+            if (!level.getBlockState(current).isAir()) {
+                airLength = 0;
+            }
 
-        // Start from the logical top of the world and scan downwards.
-        for (int y = level.getLogicalHeight(); y > level.getMinBuildHeight(); y--) {
-            BlockPos currentPos = new BlockPos(x, y, z);
+            airLength++;
             
-            // Check if the block *below* the current position is solid (i.e., it's ground)
-            if (!level.getBlockState(currentPos.below()).isAir()) {
-                BlockPos headPos = currentPos.above(); // Player's head will be here.
+            if (airLength < 3) {continue;}
+            //If the check passed 3 times in a row then we continue
 
-                // Check if the spot for the feet AND the head are both air.
-                if (level.getBlockState(currentPos).isAir() && level.getBlockState(headPos).isAir()) {
-                    // This is a safe spot! Return the position for the player's feet.
-                    return currentPos; 
-                }
+            //Now we check if the block is not solid and if it isnt we add it to recorded air.
+            if (!level.getBlockState(pos).isSolid()) {
+                lastRecordedAir = current;
+                continue;
+            }
+
+            break;
+            
+        }
+
+        //Switch to a more precise method
+        if (lastRecordedAir != null) {
+            int maxSearchDown = 0;
+            //Search from the last recorded air position to Y level 30 (undergarden level)
+            for (int y = lastRecordedAir.getY(); y > level.getMinBuildHeight() + 30; y--) {
+                BlockPos current = new BlockPos(x, y, z);
+                BlockPos below = current.below();
+
+                //Find the current block and check if its air (if so keep looping)
+                if (!level.getBlockState(current).isSolid()) {continue;}
+                //Add to the maximun searching depth (after finding a block so we dont keep doing checks which could slow down the check)
+                maxSearchDown++;
+
+                Block currentBlock = level.getBlockState(current).getBlock();
+                //Gets the valid block list and checks if the block can actually be spawned on
+                boolean isSpawnableBlock = getValidGroundBlocks().contains(currentBlock);
+                if (isSpawnableBlock) {return current;}
+                if (maxSearchDown >= 3) {break;}
             }
         }
-        // If the loop finishes without finding a spot, return null.
-        return null; 
+        return null;
     }
 }
