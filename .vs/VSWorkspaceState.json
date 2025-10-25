@@ -7,14 +7,10 @@
     "\\src\\main\\java\\com",
     "\\src\\main\\java\\com\\jkdr",
     "\\src\\main\\java\\com\\jkdr\\abyssalascentdimensionpatcher",
-    "\\src\\main\\java\\com\\jkdr\\abyssalascentdimensionpatcher\\util",
-    "\\src\\main\\resources",
-    "\\src\\main\\resources\\assets",
-    "\\src\\main\\resources\\assets\\abyssalascentdimensionpatcher",
-    "\\src\\main\\resources\\assets\\abyssalascentdimensionpatcher\\lang",
-    "\\src\\main\\resources\\data",
-    "\\src\\main\\resources\\data\\abyssalascentdimensionpatcher"
+    "\\src\\main\\java\\com\\jkdr\\abyssalascentdimensionpatcher\\data",
+    "\\src\\main\\java\\com\\jkdr\\abyssalascentdimensionpatcher\\eventHooks",
+    "\\src\\main\\java\\com\\jkdr\\abyssalascentdimensionpatcher\\mixins"
   ],
-  "SelectedNode": "\\gradle.properties",
+  "SelectedNode": "\\src\\main\\java\\com\\jkdr\\abyssalascentdimensionpatcher\\mixins\\MixinServerConfigsIronsSpells.java",
   "PreviewInSolutionExplorer": false
 }

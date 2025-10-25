@@ -8,12 +8,11 @@
     "MixinServerTeleportationManager",
     "MixinPlayerRespawnLogic",
     "MixinServerLevel",
-    "MixinRecallSpell"
+    "MixinRecallSpell",
+    "MixinSpellCooldowns"
   ],
   "server": [
-    "MixinServerPlayerGameModePatchForDedicatedServers",
-    
-
+    "MixinServerPlayerGameModePatchForDedicatedServers"
   ],
   "client": [ ],
   "injectors": {
