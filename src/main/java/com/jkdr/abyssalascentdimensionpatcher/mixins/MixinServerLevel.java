@@ -56,7 +56,8 @@ public abstract class MixinServerLevel implements ServerLevelDataAccessor {
                 List.of(
                     ResourceKey.create(Registries.BLOCK, new ResourceLocation("minecraft", "packed_mud")),
                     ResourceKey.create(Registries.BLOCK, new ResourceLocation("alexscaves", "coprolith")),
-                    ResourceKey.create(Registries.BLOCK, new ResourceLocation("alexscaves", "guanostone"))
+                    ResourceKey.create(Registries.BLOCK, new ResourceLocation("alexscaves", "guanostone")),
+                    ResourceKey.create(Registries.BLOCK, new ResourceLocation("minecraft", "obsidian"))
                 ),
                 59
             );
