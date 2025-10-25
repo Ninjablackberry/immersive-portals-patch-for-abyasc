@@ -1,0 +1,43 @@
+package com.jkdr.abyssalascentdimensionpatcher.util;
+
+import com.jkdr.abyssalascentdimensionpatcher.util.ServerMessages;
+import com.mojang.logging.LogUtils;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraftforge.registries.ForgeRegistries;
+import org.slf4j.Logger;
+
+public class PatchouliBookManager {
+    private static final Logger LOGGER = LogUtils.getLogger();
+
+    public static void givePlayerPatchouliBook(ServerPlayer player) {
+        CompoundTag playerData = player.getPersistentData();
+        CompoundTag persistentTag = playerData.getCompound(Player.PERSISTED_NBT_TAG);
+
+        if (!persistentTag.getBoolean(ModInternalConfig.DISABLE_GUIDE_TAG)) {
+            ResourceLocation bookId = new ResourceLocation("patchouli", "guide_book");
+            Item guideBookItem = ForgeRegistries.ITEMS.getValue(bookId);
+            if (guideBookItem != null && guideBookItem != Items.AIR) {
+                ItemStack guideBookStack = new ItemStack(guideBookItem);
+
+                CompoundTag bookNbt = new CompoundTag();
+                bookNbt.putString("patchouli:book", "patchouli:aa_guide_book"); // Corrected book ID format
+                guideBookStack.setTag(bookNbt);
+
+                player.getInventory().add(guideBookStack);
+                LOGGER.info("Successfully gave Patchouli guide book to {}.", player.getName().getString());
+
+                ServerMessages.bookEnabled(player);
+            } else {
+                LOGGER.warn("Could not find item 'patchouli:guide_book'. Is Patchouli installed?");
+            }
+        } else {
+            ServerMessages.bookDisabled(player);
+        }
+    }
+}

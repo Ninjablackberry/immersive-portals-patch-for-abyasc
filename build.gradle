@@ -115,6 +115,7 @@ dependencies {
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
     implementation fg.deobf("curse.maven:immersive-portals-for-forge-355440:6368524")
     implementation fg.deobf("curse.maven:irons-spells-n-spellbooks-855414:6054196")
+    implementation fg.deobf("curse.maven:dimension-viewer-857799:4632484")
 
     compileOnly(annotationProcessor("io.github.llamalad7:mixinextras-common:0.5.0"))
     implementation(jarJar("io.github.llamalad7:mixinextras-forge:0.5.0")) {
