@@ -1,4 +1,4 @@
-package com.jkdr.abyssalascentdimensionpatcher.mixins;
+package com.jkdr.abyssalascentdimensionpatcher.mixins.patch.spawn;
 
 import com.jkdr.abyssalascentdimensionpatcher.eventHooks.playerSpawnEvents;
 import com.jkdr.abyssalascentdimensionpatcher.util.ModInternalConfig;

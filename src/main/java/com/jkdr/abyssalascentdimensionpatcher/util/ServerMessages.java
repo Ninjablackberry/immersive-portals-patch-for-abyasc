@@ -8,6 +8,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.world.level.Level;
 
 import java.util.Optional;
 
@@ -21,42 +22,6 @@ public class ServerMessages {
             FormattingCore.createPrefixWithFormatting(),
             ModInternalConfig.DISCORD_CMD, 
             FormattingCore.createCommandClickableComponent(ModInternalConfig.DISCORD_CMD))
-        );
-    }
-
-    public static void bookDisabled(ServerPlayer player) {
-        player.sendSystemMessage(FormattingCore.serverTranslate(
-            "message.abyssalascentdimensionpatcher.bookdisabled", 
-            FormattingCore.createPrefixWithFormatting(),
-            ModInternalConfig.BOOK_TOGGLE_CMD, 
-            FormattingCore.createCommandClickableComponent(ModInternalConfig.BOOK_TOGGLE_CMD))
-        );
-    }
-
-    public static void bookEnabled(ServerPlayer player) {
-        player.sendSystemMessage(FormattingCore.serverTranslate(
-            "message.abyssalascentdimensionpatcher.bookenabled", 
-            FormattingCore.createPrefixWithFormatting(),
-            ModInternalConfig.BOOK_TOGGLE_CMD, 
-            FormattingCore.createCommandClickableComponent(ModInternalConfig.BOOK_TOGGLE_CMD))
-        );
-    }
-
-    public static void bookNowEnabled(ServerPlayer player) {
-        player.sendSystemMessage(FormattingCore.serverTranslate(
-            "message.abyssalascentdimensionpatcher.set.bookenabled", 
-            FormattingCore.createPrefixWithFormatting(),
-            ModInternalConfig.BOOK_TOGGLE_CMD, 
-            FormattingCore.createCommandClickableComponent(ModInternalConfig.BOOK_TOGGLE_CMD))
-        );
-    }
-
-    public static void bookNowDisabled(ServerPlayer player) {
-        player.sendSystemMessage(FormattingCore.serverTranslate(
-            "message.abyssalascentdimensionpatcher.set.bookdisabled", 
-            FormattingCore.createPrefixWithFormatting(),
-            ModInternalConfig.BOOK_TOGGLE_CMD, 
-            FormattingCore.createCommandClickableComponent(ModInternalConfig.BOOK_TOGGLE_CMD))
         );
     }
 
@@ -94,5 +59,21 @@ public class ServerMessages {
         }
 
         player.sendSystemMessage(FormattingCore.serverTranslate("message.abyssalascentdimensionpatcher.failedBlockBreak", ChatFormatting.RED), true);
+    }
+
+    public static void invalidSourceMine(Level level, BlockPos sourceBlock) {
+        //Play the sound at the block to everyone to give more feedback the block cannot be broken
+        if (BLOCKBREAKSOUND != null) {
+            level.playSound(
+                null, // null = broadcast to all players nearby
+                sourceBlock.getX() + 0.5,
+                sourceBlock.getY() + 0.5,
+                sourceBlock.getZ() + 0.5,
+                BLOCKBREAKSOUND,
+                SoundSource.BLOCKS,
+                1.0F,
+                1.0F
+            );
+        }
     }
 }

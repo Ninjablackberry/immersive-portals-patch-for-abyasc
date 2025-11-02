@@ -4,17 +4,27 @@
   "refmap": "mixins.abyssalascentdimensionpatcher.refmap.json",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
-    "MixinServerPlayerGameModePatchForClientAndServers",
-    "MixinServerTeleportationManager",
-    "MixinPlayerRespawnLogic",
-    "MixinServerLevel",
-    "MixinRecallSpell",
-    "MixinSpellCooldowns"
+    "patch.dimchange.MixinServerTeleportationManager",
+    "patch.spawn.MixinRecallSpell",
+    "patch.blockbreaking.MixinServerPlayerGameModePatchForClientAndServers",
+
+    "patch.c2meSupport.spartanWeaponry.MixinItemRandomizer",
+    "patch.c2meSupport.aether_redux.MixinBlightwillowRootsPlacer",
+
+    "invokers.MixinTrunkPlacer",
+    "invokers.MixinPlayerRespawnLogic",
+
+
+
+    "feature.blockRules.MixinServerLevel",
+    "feature.blockRules.MixinLevel",
+    "feature.cfgExpansion.irons_spellbooks.MixinSpellCooldowns"
+
   ],
   "server": [
-    "MixinServerPlayerGameModePatchForDedicatedServers"
+    "patch.blockbreaking.MixinServerPlayerGameModePatchForDedicatedServers"
   ],
-  "client": [ ],
+  "client": [ "patch.lavaVision.MixinClientEvents" ],
   "injectors": {
     "defaultRequire": 1
   }

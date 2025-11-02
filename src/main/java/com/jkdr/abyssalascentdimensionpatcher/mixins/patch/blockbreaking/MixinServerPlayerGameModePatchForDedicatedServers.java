@@ -1,4 +1,4 @@
-package com.jkdr.abyssalascentdimensionpatcher.mixins;
+package com.jkdr.abyssalascentdimensionpatcher.mixins.patch.blockbreaking;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;

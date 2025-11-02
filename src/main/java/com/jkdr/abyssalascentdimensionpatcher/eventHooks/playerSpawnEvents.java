@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableSet;
 import com.jkdr.abyssalascentdimensionpatcher.AbyssalAscentDimensionPatcher;
 import com.jkdr.abyssalascentdimensionpatcher.data.SpawnPosData;
 import com.jkdr.abyssalascentdimensionpatcher.util.ModInternalConfig;
-import com.jkdr.abyssalascentdimensionpatcher.util.PatchouliBookManager;
 import com.jkdr.abyssalascentdimensionpatcher.util.ServerMessages;
 import com.jkdr.abyssalascentdimensionpatcher.util.StructureSpawning;
 import com.mojang.datafixers.util.Pair;
@@ -98,7 +97,6 @@ public class playerSpawnEvents {
             ServerMessages.spawnStructureNew(player, getSpawnCoordinates(undergardenLevel));
         } // Only teleport if first time
         else if (player.getRespawnPosition() == null) {
-            PatchouliBookManager.givePlayerPatchouliBook(player);
 
             BlockPos rawPos = getSpawnCoordinates(undergardenLevel);
             BlockPos adjustedPos = rawPos.offset(-5, 1, 3);
@@ -123,7 +121,6 @@ public class playerSpawnEvents {
         if (event.isEndConquered()) return;
 
         ServerPlayer player = (ServerPlayer) event.getEntity();
-        PatchouliBookManager.givePlayerPatchouliBook(player);
 
         if (player.getRespawnPosition() != null || player.level().dimension() != Level.OVERWORLD) return;
 

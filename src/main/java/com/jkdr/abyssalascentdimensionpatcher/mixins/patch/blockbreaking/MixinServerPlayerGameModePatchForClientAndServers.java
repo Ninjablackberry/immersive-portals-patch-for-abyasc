@@ -1,4 +1,4 @@
-package com.jkdr.abyssalascentdimensionpatcher.mixins;
+package com.jkdr.abyssalascentdimensionpatcher.mixins.patch.blockbreaking;
 
 import com.jkdr.abyssalascentdimensionpatcher.data.dimensionRoofData;
 import com.jkdr.abyssalascentdimensionpatcher.interfaces.ServerLevelDataAccessor;
@@ -16,6 +16,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import qouteall.imm_ptl.core.block_manipulation.BlockManipulationServer;
+import com.jkdr.abyssalascentdimensionpatcher.AbyssalAscentDimensionPatcher;
 
 @Mixin(value = ServerPlayerGameMode.class, priority = 2001)
 public abstract class MixinServerPlayerGameModePatchForClientAndServers {
@@ -36,7 +37,7 @@ public abstract class MixinServerPlayerGameModePatchForClientAndServers {
     }
 
     @Inject(method = "destroyBlock", at = @At("HEAD"), cancellable = true)
-    private void checkRoofBlock(BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
+    private void preSetPlayerDestroy(BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
         ServerLevel level = ip_getActualWorld();
         
         dimensionRoofData roofData = ((ServerLevelDataAccessor) level).getRoofData();
@@ -47,7 +48,16 @@ public abstract class MixinServerPlayerGameModePatchForClientAndServers {
             ServerMessages.pickaxeWeak(player, pos);
 
             cir.setReturnValue(false); // cancels the method, returns false
+        } else {
+            AbyssalAscentDimensionPatcher.IS_PLAYER_BREAKING.set(true);
         }
+
+        
+    }
+
+    @Inject(method = "destroyBlock", at = @At("RETURN"))
+    private void postSetPlayerDestroy(BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
+        AbyssalAscentDimensionPatcher.IS_PLAYER_BREAKING.set(false);
 
     }
 

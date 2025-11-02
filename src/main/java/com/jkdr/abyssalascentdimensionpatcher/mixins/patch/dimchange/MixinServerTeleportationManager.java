@@ -1,4 +1,4 @@
-package com.jkdr.abyssalascentdimensionpatcher.mixins;
+package com.jkdr.abyssalascentdimensionpatcher.mixins.patch.dimchange;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;

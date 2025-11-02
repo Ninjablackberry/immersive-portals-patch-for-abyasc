@@ -1,4 +1,4 @@
-package com.jkdr.abyssalascentdimensionpatcher.mixins;
+package com.jkdr.abyssalascentdimensionpatcher.mixins.patch.dimchange;
 
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;

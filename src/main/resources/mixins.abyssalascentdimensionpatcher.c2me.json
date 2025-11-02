@@ -1,0 +1,13 @@
+{
+  "required": false,
+  "package": "com.jkdr.abyssalascentdimensionpatcher.mixins",
+  "priority": 2000, // Important: Use high priority here too
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "patch.c2meSupport.spartanWeaponry.MixinItemRandomizer",
+    "patch.c2meSupport.aether_redux.MixinBlightwillowRootsPlacer"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

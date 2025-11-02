@@ -1,4 +1,4 @@
-package com.jkdr.abyssalascentdimensionpatcher.mixins;
+package com.jkdr.abyssalascentdimensionpatcher.mixins.feature.blockRules;
 
 // Import the new interface
 import com.jkdr.abyssalascentdimensionpatcher.data.dimensionRoofData;
@@ -56,7 +56,8 @@ public abstract class MixinServerLevel implements ServerLevelDataAccessor {
                 List.of(
                     ResourceKey.create(Registries.BLOCK, new ResourceLocation("minecraft", "packed_mud")),
                     ResourceKey.create(Registries.BLOCK, new ResourceLocation("alexscaves", "coprolith")),
-                    ResourceKey.create(Registries.BLOCK, new ResourceLocation("alexscaves", "guanostone"))
+                    ResourceKey.create(Registries.BLOCK, new ResourceLocation("alexscaves", "guanostone")),
+                    ResourceKey.create(Registries.BLOCK, new ResourceLocation("minecraft", "obsidian"))
                 ),
                 59
             );
@@ -80,7 +81,7 @@ public abstract class MixinServerLevel implements ServerLevelDataAccessor {
                 self,
                 List.of(
                     ResourceKey.create(Registries.ITEM, new ResourceLocation("kubejs", "arcane_steel_pickaxe")),
-                    ResourceKey.create(Registries.ITEM, new ResourceLocation("kubejs", "netherite_pickaxe")),
+                    ResourceKey.create(Registries.ITEM, new ResourceLocation("minecraft", "netherite_pickaxe")),
                     ResourceKey.create(Registries.ITEM, new ResourceLocation("kubejs", "ignitium_pickaxe")),
                     ResourceKey.create(Registries.ITEM, new ResourceLocation("cataclysm", "black_steel_pickaxe")),
                     ResourceKey.create(Registries.ITEM, new ResourceLocation("kubejs", "tectonic_abyssal_pickaxe"))

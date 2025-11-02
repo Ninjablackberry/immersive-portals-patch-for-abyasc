@@ -7,10 +7,13 @@
     "\\src\\main\\java\\com",
     "\\src\\main\\java\\com\\jkdr",
     "\\src\\main\\java\\com\\jkdr\\abyssalascentdimensionpatcher",
-    "\\src\\main\\java\\com\\jkdr\\abyssalascentdimensionpatcher\\data",
-    "\\src\\main\\java\\com\\jkdr\\abyssalascentdimensionpatcher\\eventHooks",
-    "\\src\\main\\java\\com\\jkdr\\abyssalascentdimensionpatcher\\mixins"
+    "\\src\\main\\java\\com\\jkdr\\abyssalascentdimensionpatcher\\mixins",
+    "\\src\\main\\java\\com\\jkdr\\abyssalascentdimensionpatcher\\mixins\\patch",
+    "\\src\\main\\java\\com\\jkdr\\abyssalascentdimensionpatcher\\mixins\\patch\\c2meSupport",
+    "\\src\\main\\java\\com\\jkdr\\abyssalascentdimensionpatcher\\mixins\\patch\\c2meSupport\\aether_redux",
+    "\\src\\main\\resources",
+    "\\src\\main\\resources\\META-INF"
   ],
-  "SelectedNode": "\\src\\main\\java\\com\\jkdr\\abyssalascentdimensionpatcher\\mixins\\MixinServerConfigsIronsSpells.java",
+  "SelectedNode": "\\src\\main\\resources\\META-INF\\mods.toml",
   "PreviewInSolutionExplorer": false
 }

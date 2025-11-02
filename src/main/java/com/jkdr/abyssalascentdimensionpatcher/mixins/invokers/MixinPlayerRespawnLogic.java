@@ -1,4 +1,4 @@
-package com.jkdr.abyssalascentdimensionpatcher.mixins;
+package com.jkdr.abyssalascentdimensionpatcher.mixins.invokers;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
